@@ -35,52 +35,22 @@ variable "vps_name" {
   default     = "Final_Project"
 }
 
-variable "public_subnet_cidr_1" {
+variable "public_subnet_cidrs" {
   description = "Cidr for public subnet 1"
-  type        = string
-  default     = "10.0.1.0/24"
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24"]
 }
 
-variable "public_subnet_cidr_2" {
-  description = "Cidr for public subnet 2"
-  type        = string
-  default     = "10.0.2.0/24"
-}
-
-variable "private_subnet_cidr_1" {
+variable "private_subnet_cidrs" {
   description = "Cidr for private subnet 1"
-  type        = string
-  default     = "10.0.3.0/24"
+  type        = list(string)
+  default     = ["10.0.3.0/24", "10.0.4.0/24"]
 }
 
-variable "private_subnet_cidr_2" {
-  description = "Cidr for private subnet 1"
-  type        = string
-  default     = "10.0.4.0/24"
-}
-
-variable "az_a" {
+variable "azs" {
   description = "Availability Zone A name"
-  type        = string
-  default     = "us-west-2a"
-}
-
-variable "az_b" {
-  description = "Availability Zone B name"
-  type        = string
-  default     = "us-west-2b"
-}
-
-variable "az_c" {
-  description = "Availability Zone C name"
-  type        = string
-  default     = "us-west-2c"
-}
-
-variable "az_d" {
-  description = "Availability Zone C name"
-  type        = string
-  default     = "us-west-2d"
+  type        = list(string)
+  default     = ["us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"]
 }
 
 variable "map_public_ip_on_launch" {

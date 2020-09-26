@@ -10,15 +10,16 @@ resource "aws_vpc" "this" {
   }
 }
 
-resource "aws_subnet" "public_1" {
-  
+resource "aws_subnet" "public" {
+  count = length(var.public_subnet_cidrs)
+
   vpc_id                          = aws_vpc.this.id
-  cidr_block                      = var.public_subnet_cidr_1
-  availability_zone               = var.az_a
+  cidr_block                      = var.public_subnet_cidrs[count.index]
+  availability_zone               = var.azs[count.index]
   map_public_ip_on_launch         = var.map_public_ip_on_launch
 
   tags = {
-      Name = "Public1"
+      Name = "Public-${count.index}" 
   }
 
   depends_on = [
@@ -26,47 +27,16 @@ resource "aws_subnet" "public_1" {
   ]
 }
 
-resource "aws_subnet" "public_2" {
-  
+resource "aws_subnet" "private" {
+    count = length(var.private_subnet_cidrs)
+
   vpc_id                          = aws_vpc.this.id
-  cidr_block                      = var.public_subnet_cidr_2
-  availability_zone               = var.az_b
+  cidr_block                      = var.private_subnet_cidrs[count.index]
+  availability_zone               = var.azs[count.index]
   map_public_ip_on_launch         = var.map_public_ip_on_launch
 
   tags = {
-      Name = "Public2"
-  }
-
-  depends_on = [
-    aws_vpc.this,
-  ]
-}
-
-resource "aws_subnet" "private_1" {
-  
-  vpc_id                          = aws_vpc.this.id
-  cidr_block                      = var.private_subnet_cidr_1
-  availability_zone               = var.az_c
-  map_public_ip_on_launch         = var.map_public_ip_on_launch
-
-  tags = {
-      Name = "Private1"
-  }
-
-  depends_on = [
-    aws_vpc.this,
-  ]
-}
-
-resource "aws_subnet" "private_2" {
-  
-  vpc_id                          = aws_vpc.this.id
-  cidr_block                      = var.private_subnet_cidr_2
-  availability_zone               = var.az_d
-  map_public_ip_on_launch         = var.map_public_ip_on_launch
-
-  tags = {
-      Name = "Private2"
+      Name = "Private-${count.index}"
   }
 
   depends_on = [
@@ -103,22 +73,13 @@ resource "aws_route_table" "public_route" {
   ]
 }
 
-resource "aws_route_table_association" "public_1_route_association" {
-  subnet_id      = aws_subnet.public_1.id
+resource "aws_route_table_association" "public_route_associations" {
+  count = length(var.public_subnet_cidrs)
+
+  subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public_route.id
 
   depends_on = [
-    aws_subnet.public_1,
-    aws_route_table.public_route,
-  ]
-}
-
-resource "aws_route_table_association" "public_2_route_association" {
-  subnet_id      = aws_subnet.public_2.id
-  route_table_id = aws_route_table.public_route.id
-
-  depends_on = [
-    aws_subnet.public_2,
     aws_route_table.public_route,
   ]
 }
@@ -148,7 +109,7 @@ resource "aws_security_group" "jenkins" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.internet_cidr_block]
   }
 
   tags = {
@@ -157,7 +118,7 @@ resource "aws_security_group" "jenkins" {
 
   depends_on = [
     aws_vpc.this,
-    aws_subnet.public_1,
+    aws_subnet.public[0],
     aws_route_table.public_route,
   ]
 }
@@ -167,7 +128,7 @@ resource "aws_instance" "jenkins" {
 
   ami              = var.ami_ubuntu
   instance_type    = var.instance_type_jenkins
-  subnet_id        = aws_subnet.public_1.id
+  subnet_id        = aws_subnet.public[0].id
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.jenkins.id]
 
@@ -179,7 +140,6 @@ resource "aws_instance" "jenkins" {
 
   depends_on = [
     aws_vpc.this,
-    aws_subnet.public_1,
     aws_route_table.public_route,
     aws_security_group.jenkins,
   ]
