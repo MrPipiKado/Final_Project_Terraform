@@ -5,6 +5,15 @@ terraform {
       version = "~> 3.0"
     }
   }
+
+  backend "s3" {
+    bucket = "mrpipikado"
+    key = "global/s3/terraform.tfstate"
+    region = "us-west-2"
+
+    dynamodb_table = "Terraform_final_project_locks"
+    encrypt = true
+  }
 }
 
 # Configure the AWS Provider
