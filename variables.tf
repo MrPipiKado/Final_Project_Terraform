@@ -1,3 +1,12 @@
+#################
+#VPC            #
+#################
+variable "create_vpc" {
+  description = "Determines wether it is neede to ctreate the VPC."
+  type        = bool
+  default     = true
+}
+
 variable "vpc_cidr" {
   description = "The CIDR block for the VPC."
   type        = string
@@ -35,10 +44,26 @@ variable "vps_name" {
   default     = "Final_Project"
 }
 
+#################
+#Subnets        #
+#################
+
+variable "create_public_subnets" {
+  description = "Determines wether it is neede to ctreate public subnets."
+  type        = bool
+  default     = true
+}
+
 variable "public_subnet_cidrs" {
   description = "Cidr for public subnet 1"
   type        = list(string)
   default     = ["10.0.1.0/24", "10.0.2.0/24"]
+}
+
+variable "create_private_subnets" {
+  description = "Determines wether it is neede to ctreate public subnets."
+  type        = bool
+  default     = true
 }
 
 variable "private_subnet_cidrs" {
@@ -59,6 +84,15 @@ variable "map_public_ip_on_launch" {
   default     = true
 }
 
+#################
+#Jenkins        #
+#################
+
+variable "create_jenkins" {
+  description = "Determines wether it is neede to ctreate the jenkins instance."
+  type        = bool
+  default     = true
+}
 
 variable "jenkins_console_port" {
   description = "Jenkins_port"

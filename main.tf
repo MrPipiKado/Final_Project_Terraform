@@ -1,4 +1,5 @@
 resource "aws_vpc" "this" {
+  count = var.create_vpc ? 1 : 0
 
   cidr_block                       = var.vpc_cidr
   instance_tenancy                 = var.instance_tenancy
@@ -11,9 +12,9 @@ resource "aws_vpc" "this" {
 }
 
 resource "aws_subnet" "public" {
-  count = length(var.public_subnet_cidrs)
+  count = var.create_public_subnets ? length(var.public_subnet_cidrs) : 0
 
-  vpc_id                          = aws_vpc.this.id
+  vpc_id                          = aws_vpc.this[0].id
   cidr_block                      = var.public_subnet_cidrs[count.index]
   availability_zone               = var.azs[count.index]
   map_public_ip_on_launch         = var.map_public_ip_on_launch
@@ -23,14 +24,14 @@ resource "aws_subnet" "public" {
   }
 
   depends_on = [
-    aws_vpc.this,
+    aws_vpc.this[0],
   ]
 }
 
 resource "aws_subnet" "private" {
-    count = length(var.private_subnet_cidrs)
+  count = var.create_private_subnets ? length(var.private_subnet_cidrs) : 0
 
-  vpc_id                          = aws_vpc.this.id
+  vpc_id                          = aws_vpc.this[0].id
   cidr_block                      = var.private_subnet_cidrs[count.index]
   availability_zone               = var.azs[count.index]
   map_public_ip_on_launch         = var.map_public_ip_on_launch
@@ -40,12 +41,12 @@ resource "aws_subnet" "private" {
   }
 
   depends_on = [
-    aws_vpc.this,
+    aws_vpc.this[0],
   ]
 }
 
 resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.this.id
+  vpc_id = aws_vpc.this[0].id
 
   tags = {
     Name = "GW"
@@ -57,7 +58,7 @@ resource "aws_internet_gateway" "gw" {
 }
 
 resource "aws_route_table" "public_route" {
-  vpc_id = aws_vpc.this.id
+  vpc_id = aws_vpc.this[0].id
 
   route {
     cidr_block = var.internet_cidr_block
@@ -69,7 +70,7 @@ resource "aws_route_table" "public_route" {
   }
 
   depends_on = [
-    aws_vpc.this,
+    aws_vpc.this[0],
   ]
 }
 
@@ -87,7 +88,7 @@ resource "aws_route_table_association" "public_route_associations" {
 resource "aws_security_group" "jenkins" {
   name        = "jenkins"
   description = "Allow access to jenkins"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = aws_vpc.this[0].id
 
   ingress {
     description = "Jenkins console from anywhere"
@@ -117,14 +118,14 @@ resource "aws_security_group" "jenkins" {
   }
 
   depends_on = [
-    aws_vpc.this,
+    aws_vpc.this[0],
     aws_subnet.public[0],
     aws_route_table.public_route,
   ]
 }
 
 resource "aws_instance" "jenkins" {
-  count = 1
+  count = var.create_jenkins ? 1 : 0
 
   ami              = var.ami_ubuntu
   instance_type    = var.instance_type_jenkins
