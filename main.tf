@@ -1,3 +1,7 @@
+#################
+#VPC            #
+#################
+
 resource "aws_vpc" "this" {
   count = var.create_vpc ? 1 : 0
 
@@ -27,6 +31,10 @@ resource "aws_subnet" "public" {
     aws_vpc.this[0],
   ]
 }
+
+#################
+#Subnets        #
+#################
 
 resource "aws_subnet" "private" {
   count = var.create_private_subnets ? length(var.private_subnet_cidrs) : 0
@@ -85,6 +93,10 @@ resource "aws_route_table_association" "public_route_associations" {
   ]
 }
 
+#################
+#Jenkins        #
+#################
+
 resource "aws_security_group" "jenkins" {
   name        = "jenkins"
   description = "Allow access to jenkins"
@@ -127,9 +139,9 @@ resource "aws_security_group" "jenkins" {
 resource "aws_instance" "jenkins" {
   count = var.create_jenkins ? 1 : 0
 
-  ami              = var.ami_ubuntu
-  instance_type    = var.instance_type_jenkins
-  subnet_id        = aws_subnet.public[0].id
+  ami                    = var.ami_ubuntu
+  instance_type          = var.instance_type_jenkins
+  subnet_id              = aws_subnet.public[0].id
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.jenkins.id]
 
@@ -146,6 +158,65 @@ resource "aws_instance" "jenkins" {
   ]
 
   tags = {
-    Name = "Jenkins"
+    Name = "Jenkins_master"
+  }
+}
+
+resource "aws_security_group" "jenkins_slave" {
+  name        = "jenkins_slave"
+  description = "Allow access to jenkins_slave from Jenkins "
+  vpc_id      = aws_vpc.this[0].id
+
+  ingress {
+    description     = "Jenkins_slave ssh from Jenkins_master"
+    from_port       = var.jenkins_ssh_port
+    to_port         = var.jenkins_ssh_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.jenkins.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.internet_cidr_block]
+  }
+
+  tags = {
+    Name = "JenkinsSlaveSG"
+  }
+
+  depends_on = [
+    aws_vpc.this[0],
+    aws_subnet.public[0],
+    aws_route_table.public_route,
+  ]
+}
+
+resource "aws_instance" "jenkins_slave" {
+  count = var.create_jenkins_slave ? 1 : 0
+
+  ami                         = var.ami_ubuntu
+  instance_type               = var.instance_type_jenkins
+  subnet_id                   = aws_subnet.public[0].id
+  key_name                    = var.key_name
+  vpc_security_group_ids      = [aws_security_group.jenkins.id]
+  private_ip                  = var.jenkins_slave_private_ip
+  associate_public_ip_address = false
+
+  ebs_block_device {
+    device_name  = "/dev/sda1" 
+    volume_size  = 8
+    volume_type  = "gp2"
+  }
+
+  depends_on = [
+    aws_vpc.this,
+    aws_route_table.public_route,
+    aws_security_group.jenkins,
+  ]
+
+  tags = {
+    Name = "JenkinsSlave"
   }
 }

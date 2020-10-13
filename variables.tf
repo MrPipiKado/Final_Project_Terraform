@@ -94,6 +94,12 @@ variable "create_jenkins" {
   default     = true
 }
 
+variable "create_jenkins_slave" {
+  description = "Determines wether it is neede to ctreate the jenkins instance."
+  type        = bool
+  default     = true
+}
+
 variable "jenkins_console_port" {
   description = "Jenkins_port"
   type        = number
@@ -128,4 +134,10 @@ variable "key_name" {
   description = "The key name to use for the instance"
   type        = string
   default     = "Key1"
+}
+
+variable "jenkins_slave_private_ip" {
+  description = "Jenkins_slave_private_ip"
+  type        = string
+  default     = "10.0.1.100"
 }
