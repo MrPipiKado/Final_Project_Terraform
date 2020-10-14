@@ -141,3 +141,169 @@ variable "jenkins_slave_private_ip" {
   type        = string
   default     = "10.0.1.100"
 }
+
+
+#################
+#Server         #
+#################
+
+variable "web_page_port" {
+  description = "Web page port"
+  type        = number
+  default     = 8080
+}
+
+variable "web_server_ssh_port" {
+  description = "Web page port"
+  type        = number
+  default     = 22
+}
+
+variable "server_private_ip" {
+  description = "server_private_ip"
+  type        = string
+  default     = "10.0.1.200"
+}
+
+variable "create_server" {
+  description = "Determines wether it is neede to ctreate the jenkins instance."
+  type        = bool
+  default     = true
+}
+
+variable "instance_type_server" {
+  description = "The type of server instance "
+  type        = string
+  default     = "t2.micro"
+}
+#################
+#RDS DB         #
+#################
+
+variable "create_db" {
+  description = "Determines wether it is neede to ctreate the RDS DB."
+  type        = bool
+  default     = true
+}
+
+variable "db_name" {
+  description = "DB name"
+  type        = string
+}
+
+variable "db_user" {
+  description = "DB user"
+  type        = string
+}
+
+variable "db_password" {
+  description = "DB password"
+  type        = string
+}
+
+variable "db_port" {
+  description = "DB port"
+  type        = number
+}
+
+variable "identifier" {
+  description = "The name of the RDS instance, if omitted, Terraform will assign a random, unique identifier"
+  type        = string
+  default     = "final-project-db"
+}
+
+variable "engine" {
+  description = "The database engine to use"
+  type        = string
+  default     = "mysql"
+}
+
+variable "engine_version" {
+  description = "The engine version to use"
+  type        = string
+  default     = "5.7"
+}
+
+variable "instance_class" {
+  description = "The instance type of the RDS instance"
+  type        = string
+  default     = "db.t2.micro"
+}
+
+variable "allocated_storage" {
+  description = "The allocated storage in gigabytes"
+  type        = string
+  default     = "20"
+}
+
+variable "storage_type" {
+  description = "One of 'standard' (magnetic), 'gp2' (general purpose SSD), or 'io1' (provisioned IOPS SSD). The default is 'io1' if iops is specified, 'standard' if not. Note that this behaviour is different from the AWS web console, where the default is 'gp2'."
+  type        = string
+  default     = "gp2"
+}
+
+variable "storage_encrypted" {
+  description = "Specifies whether the DB instance is encrypted"
+  type        = bool
+  default     = false
+}
+
+variable "iam_database_authentication_enabled" {
+  description = "Specifies whether or mappings of AWS Identity and Access Management (IAM) accounts to database accounts is enabled"
+  type        = bool
+  default     = false
+}
+
+variable "multi_az" {
+  description = "Specifies if the RDS instance is multi-AZ"
+  type        = bool
+  default     = false
+}
+
+variable "publicly_accessible" {
+  description = "Bool to control if instance is publicly accessible"
+  type        = bool
+  default     = false
+}
+
+variable "allow_major_version_upgrade" {
+  description = "Indicates that major version upgrades are allowed. Changing this parameter does not result in an outage and the change is asynchronously applied as soon as possible"
+  type        = bool
+  default     = false
+}
+
+variable "auto_minor_version_upgrade" {
+  description = "Indicates that minor engine upgrades will be applied automatically to the DB instance during the maintenance window"
+  type        = bool
+  default     = true
+}
+
+variable "apply_immediately" {
+  description = "Specifies whether any database modifications are applied immediately, or during the next maintenance window"
+  type        = bool
+  default     = false
+}
+
+variable "skip_final_snapshot" {
+  description = "Determines whether a final DB snapshot is created before the DB instance is deleted. If true is specified, no DBSnapshot is created. If false is specified, a DB snapshot is created before the DB instance is deleted, using the value from final_snapshot_identifier"
+  type        = bool
+  default     = true
+}
+
+variable "copy_tags_to_snapshot" {
+  description = "On delete, copy all Instance tags to the final snapshot (if final_snapshot_identifier is specified)"
+  type        = bool
+  default     = false
+}
+
+variable "performance_insights_enabled" {
+  description = "Specifies whether Performance Insights are enabled"
+  type        = bool
+  default     = false
+}
+
+variable "deletion_protection" {
+  description = "The database can't be deleted when this value is set to true."
+  type        = bool
+  default     = false
+}

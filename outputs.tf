@@ -4,6 +4,11 @@ output "jenkins_address" {
 }
 
 output "jenkins_port" {
-    description = "Connect to Jenkins on this IP"
+    description = "Connect to Jenkins on this port"
     value       = var.jenkins_console_port
+}
+
+output "db_endpoint" {
+    description = "Connect to Jenkins on this IP"
+    value       = aws_db_instance.db[0].endpoint
 }
