@@ -111,6 +111,14 @@ resource "aws_security_group" "jenkins" {
   }
 
   ingress {
+    description = "To Kubernetes master from public subnet1"
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = [var.public_subnet_cidrs[0]]
+  }
+
+  ingress {
     description = "Jenkins ssh from anywhere"
     from_port   = var.jenkins_ssh_port
     to_port     = var.jenkins_ssh_port
@@ -144,6 +152,7 @@ resource "aws_instance" "jenkins" {
   subnet_id              = aws_subnet.public[0].id
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.jenkins.id]
+  private_ip             = var.jenkins_master_private_ip
 
   ebs_block_device {
     device_name  = "/dev/sda1" 
@@ -175,6 +184,14 @@ resource "aws_security_group" "jenkins_slave" {
     security_groups = [aws_security_group.jenkins.id]
   }
 
+  ingress {
+    description     = "Jenkins_slave kubelet from Jenkins_master"
+    from_port       = 6443
+    to_port         = 6443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.jenkins.id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -200,9 +217,8 @@ resource "aws_instance" "jenkins_slave" {
   instance_type               = var.instance_type_jenkins
   subnet_id                   = aws_subnet.public[0].id
   key_name                    = var.key_name
-  vpc_security_group_ids      = [aws_security_group.jenkins.id]
+  vpc_security_group_ids      = [aws_security_group.jenkins_slave.id]
   private_ip                  = var.jenkins_slave_private_ip
-  associate_public_ip_address = false
 
   ebs_block_device {
     device_name  = "/dev/sda1" 
@@ -297,15 +313,15 @@ resource "aws_instance" "server" {
 
 resource "aws_security_group" "db" {
   name        = "db"
-  description = "Allow access to db from production instance"
+  description = "Allow access to db from production instances"
   vpc_id      = aws_vpc.this[0].id
 
   ingress {
-    description = "DB from production instance"
+    description = "DB from production instances"
     from_port   = var.db_port
     to_port     = var.db_port
     protocol    = "tcp"
-    security_groups = [aws_security_group.server.id]
+    security_groups = [aws_security_group.server.id, aws_security_group.jenkins_slave.id]
   }
 
   egress {

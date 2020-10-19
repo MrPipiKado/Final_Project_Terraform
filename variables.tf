@@ -1,4 +1,32 @@
 #################
+#Resources      #
+#################
+
+variable "create_jenkins" {
+  description = "Determines wether it is neede to ctreate the jenkins instance."
+  type        = bool
+  default     = true
+}
+
+variable "create_jenkins_slave" {
+  description = "Determines wether it is neede to ctreate the jenkins instance."
+  type        = bool
+  default     = true
+}
+
+variable "create_server" {
+  description = "Determines wether it is neede to ctreate the jenkins instance."
+  type        = bool
+  default     = true
+}
+
+variable "create_db" {
+  description = "Determines wether it is neede to ctreate the RDS DB."
+  type        = bool
+  default     = true
+}
+
+#################
 #VPC            #
 #################
 variable "create_vpc" {
@@ -29,7 +57,7 @@ variable "instance_tenancy" {
 variable "enable_dns_hostnames" {
   description = "Should be true to enable DNS hostnames in the VPC"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_dns_support" {
@@ -88,18 +116,6 @@ variable "map_public_ip_on_launch" {
 #Jenkins        #
 #################
 
-variable "create_jenkins" {
-  description = "Determines wether it is neede to ctreate the jenkins instance."
-  type        = bool
-  default     = true
-}
-
-variable "create_jenkins_slave" {
-  description = "Determines wether it is neede to ctreate the jenkins instance."
-  type        = bool
-  default     = true
-}
-
 variable "jenkins_console_port" {
   description = "Jenkins_port"
   type        = number
@@ -142,6 +158,12 @@ variable "jenkins_slave_private_ip" {
   default     = "10.0.1.100"
 }
 
+variable "jenkins_master_private_ip" {
+  description = "Jenkins_slave_private_ip"
+  type        = string
+  default     = "10.0.1.150"
+}
+
 
 #################
 #Server         #
@@ -165,12 +187,6 @@ variable "server_private_ip" {
   default     = "10.0.1.200"
 }
 
-variable "create_server" {
-  description = "Determines wether it is neede to ctreate the jenkins instance."
-  type        = bool
-  default     = true
-}
-
 variable "instance_type_server" {
   description = "The type of server instance "
   type        = string
@@ -179,12 +195,6 @@ variable "instance_type_server" {
 #################
 #RDS DB         #
 #################
-
-variable "create_db" {
-  description = "Determines wether it is neede to ctreate the RDS DB."
-  type        = bool
-  default     = true
-}
 
 variable "db_name" {
   description = "DB name"
