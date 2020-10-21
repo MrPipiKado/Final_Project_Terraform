@@ -94,21 +94,13 @@ resource "aws_route_table_association" "public_route_associations" {
 }
 
 #################
-#Jenkins        #
+#Kubernetes     #
 #################
 
-resource "aws_security_group" "jenkins" {
-  name        = "jenkins"
-  description = "Allow access to jenkins"
+resource "aws_security_group" "k8s_master" {
+  name        = "k8s_master"
+  description = "Allow access to k8s_master and it serves as a bastion host"
   vpc_id      = aws_vpc.this[0].id
-
-  ingress {
-    description = "Jenkins console from anywhere"
-    from_port   = var.jenkins_console_port
-    to_port     = var.jenkins_console_port
-    protocol    = "tcp"
-    cidr_blocks = [var.internet_cidr_block]
-  }
 
   ingress {
     description = "To Kubernetes master from public subnet1"
@@ -119,9 +111,17 @@ resource "aws_security_group" "jenkins" {
   }
 
   ingress {
-    description = "Jenkins ssh from anywhere"
-    from_port   = var.jenkins_ssh_port
-    to_port     = var.jenkins_ssh_port
+    description = "Bastion ssh from anywhere"
+    from_port   = var.bastion_ssh_port
+    to_port     = var.bastion_ssh_port
+    protocol    = "tcp"
+    cidr_blocks = [var.internet_cidr_block]
+  }
+
+  ingress {
+    description = "Bastion ssh from anywhere"
+    from_port   = var.cluster_port
+    to_port     = var.cluster_port
     protocol    = "tcp"
     cidr_blocks = [var.internet_cidr_block]
   }
@@ -134,7 +134,7 @@ resource "aws_security_group" "jenkins" {
   }
 
   tags = {
-    Name = "JenkinsSG"
+    Name = "K8s_master_bastion_SG"
   }
 
   depends_on = [
@@ -144,14 +144,85 @@ resource "aws_security_group" "jenkins" {
   ]
 }
 
-resource "aws_instance" "jenkins" {
+resource "aws_instance" "k8s_master" {
+  count = var.create_k8s_master ? 1 : 0
+
+  ami                    = var.ami_ubuntu
+  instance_type          = var.instance_type_k8s_master
+  subnet_id              = aws_subnet.public[0].id
+  key_name               = var.key_name
+  vpc_security_group_ids = [aws_security_group.k8s_master.id]
+  private_ip             = var.k8s_master_private_ip
+
+  ebs_block_device {
+    device_name  = "/dev/sda1" 
+    volume_size  = 8
+    volume_type  = "gp2"
+  }
+
+  depends_on = [
+    aws_vpc.this,
+    aws_route_table.public_route,
+    aws_security_group.k8s_master,
+  ]
+
+  tags = {
+    Name = "k8s_master_bastion"
+  }
+}
+
+
+#################
+#Jenkins master #
+#################
+
+resource "aws_security_group" "jenkins_master" {
+  name        = "jenkins_master"
+  description = "Allow access to jenkins web page from anywhere and to ssh from k8s_master"
+  vpc_id      = aws_vpc.this[0].id
+
+  ingress {
+    description = "Jenkins console from anywhere"
+    from_port   = var.web_page_port
+    to_port     = var.web_page_port
+    protocol    = "tcp"
+    cidr_blocks = [var.internet_cidr_block]
+  }
+
+  ingress {
+    description = "Jenkins ssh from anywhere"
+    from_port   = var.jenkins_ssh_port
+    to_port     = var.jenkins_ssh_port
+    protocol    = "tcp"
+    security_groups = [aws_security_group.k8s_master.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.internet_cidr_block]
+  }
+
+  tags = {
+    Name = "JenkinsMasterSG"
+  }
+
+  depends_on = [
+    aws_vpc.this[0],
+    aws_subnet.public[0],
+    aws_route_table.public_route,
+  ]
+}
+
+resource "aws_instance" "jenkins_master" {
   count = var.create_jenkins ? 1 : 0
 
   ami                    = var.ami_ubuntu
   instance_type          = var.instance_type_jenkins
   subnet_id              = aws_subnet.public[0].id
   key_name               = var.key_name
-  vpc_security_group_ids = [aws_security_group.jenkins.id]
+  vpc_security_group_ids = [aws_security_group.jenkins_master.id]
   private_ip             = var.jenkins_master_private_ip
 
   ebs_block_device {
@@ -163,13 +234,17 @@ resource "aws_instance" "jenkins" {
   depends_on = [
     aws_vpc.this,
     aws_route_table.public_route,
-    aws_security_group.jenkins,
+    aws_security_group.jenkins_master,
   ]
 
   tags = {
-    Name = "Jenkins_master"
+    Name = "JenkinsMaster"
   }
 }
+
+#################
+#Jenkins slave  #
+#################
 
 resource "aws_security_group" "jenkins_slave" {
   name        = "jenkins_slave"
@@ -177,11 +252,19 @@ resource "aws_security_group" "jenkins_slave" {
   vpc_id      = aws_vpc.this[0].id
 
   ingress {
-    description     = "Jenkins_slave ssh from Jenkins_master"
-    from_port       = var.jenkins_ssh_port
-    to_port         = var.jenkins_ssh_port
+    description     = "Jenkins_slave ssh from k8s_master"
+    from_port       = var.jenkins_slave_ssh_port
+    to_port         = var.jenkins_slave_ssh_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.jenkins.id]
+    security_groups = [aws_security_group.k8s_master.id]
+  }
+
+  ingress {
+    description     = "Jenkins_slave ssh from Jenkins_master"
+    from_port       = var.jenkins_slave_ssh_port
+    to_port         = var.jenkins_slave_ssh_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.jenkins_master.id]
   }
 
   ingress {
@@ -189,7 +272,7 @@ resource "aws_security_group" "jenkins_slave" {
     from_port       = 6443
     to_port         = 6443
     protocol        = "tcp"
-    security_groups = [aws_security_group.jenkins.id]
+    security_groups = [aws_security_group.k8s_master.id]
   }
 
   egress {
@@ -214,7 +297,7 @@ resource "aws_instance" "jenkins_slave" {
   count = var.create_jenkins_slave ? 1 : 0
 
   ami                         = var.ami_ubuntu
-  instance_type               = var.instance_type_jenkins
+  instance_type               = var.instance_type_jenkins_slave
   subnet_id                   = aws_subnet.public[0].id
   key_name                    = var.key_name
   vpc_security_group_ids      = [aws_security_group.jenkins_slave.id]
@@ -229,81 +312,11 @@ resource "aws_instance" "jenkins_slave" {
   depends_on = [
     aws_vpc.this,
     aws_route_table.public_route,
-    aws_security_group.jenkins,
+    aws_security_group.jenkins_slave,
   ]
 
   tags = {
     Name = "JenkinsSlave"
-  }
-}
-
-#################
-#Server         #
-#################
-
-resource "aws_security_group" "server" {
-  name        = "server"
-  description = "Allow access to server web page from anywhere and to ssh from jenkins"
-  vpc_id      = aws_vpc.this[0].id
-
-  ingress {
-    description = "Web page from anywhere"
-    from_port   = var.web_page_port
-    to_port     = var.web_page_port
-    protocol    = "tcp"
-    cidr_blocks = [var.internet_cidr_block]
-  }
-
-  ingress {
-    description = "Jenkins ssh from anywhere"
-    from_port   = var.web_server_ssh_port
-    to_port     = var.web_server_ssh_port
-    protocol    = "tcp"
-    security_groups = [aws_security_group.jenkins.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = [var.internet_cidr_block]
-  }
-
-  tags = {
-    Name = "WebServerSG"
-  }
-
-  depends_on = [
-    aws_vpc.this[0],
-    aws_subnet.public[0],
-    aws_route_table.public_route,
-  ]
-}
-
-resource "aws_instance" "server" {
-  count = var.create_server ? 1 : 0
-
-  ami                    = var.ami_ubuntu
-  instance_type          = var.instance_type_server
-  subnet_id              = aws_subnet.public[0].id
-  key_name               = var.key_name
-  vpc_security_group_ids = [aws_security_group.server.id]
-  private_ip             = var.server_private_ip
-
-  ebs_block_device {
-    device_name  = "/dev/sda1" 
-    volume_size  = 8
-    volume_type  = "gp2"
-  }
-
-  depends_on = [
-    aws_vpc.this,
-    aws_route_table.public_route,
-    aws_security_group.server,
-  ]
-
-  tags = {
-    Name = "Server"
   }
 }
 
@@ -321,7 +334,7 @@ resource "aws_security_group" "db" {
     from_port   = var.db_port
     to_port     = var.db_port
     protocol    = "tcp"
-    security_groups = [aws_security_group.server.id, aws_security_group.jenkins_slave.id]
+    security_groups = [aws_security_group.jenkins_master.id, aws_security_group.jenkins_slave.id, aws_security_group.k8s_master.id]
   }
 
   egress {

@@ -14,8 +14,8 @@ variable "create_jenkins_slave" {
   default     = true
 }
 
-variable "create_server" {
-  description = "Determines wether it is neede to ctreate the jenkins instance."
+variable "create_k8s_master" {
+  description = "Determines wether it is neede to ctreate the k8s_master."
   type        = bool
   default     = true
 }
@@ -113,19 +113,18 @@ variable "map_public_ip_on_launch" {
 }
 
 #################
-#Jenkins        #
+#Kubernetes     #
 #################
 
-variable "jenkins_console_port" {
-  description = "Jenkins_port"
-  type        = number
-  default     = 8080
-}
-
-variable "jenkins_ssh_port" {
-  description = "Jenkins_port"
+variable "bastion_ssh_port" {
+  description = "bastion_ssh_port"
   type        = number
   default     = 22
+}
+variable "cluster_port" {
+  description = "bastion_ssh_port"
+  type        = number
+  default     = 8080
 }
 
 variable "internet_cidr_block" {
@@ -140,7 +139,7 @@ variable "ami_ubuntu" {
   default     = "ami-06e54d05255faf8f6"
 }
 
-variable "instance_type_jenkins" {
+variable "instance_type_k8s_master" {
   description = "The type of jenkins instance "
   type        = string
   default     = "t2.micro"
@@ -152,21 +151,42 @@ variable "key_name" {
   default     = "Key1"
 }
 
+variable "k8s_master_private_ip" {
+  description = "Jenkins_slave_private_ip"
+  type        = string
+  default     = "10.0.1.150"
+}
+
+#################
+#Jenkins slave  #
+#################
+
+variable "jenkins_slave_ssh_port" {
+  description = "Jenkins_port"
+  type        = number
+  default     = 22
+}
+
 variable "jenkins_slave_private_ip" {
   description = "Jenkins_slave_private_ip"
   type        = string
   default     = "10.0.1.100"
 }
 
-variable "jenkins_master_private_ip" {
-  description = "Jenkins_slave_private_ip"
-  type        = string
-  default     = "10.0.1.150"
+variable "jenkins_console_port" {
+  description = "Jenkins_port"
+  type        = number
+  default     = 8080
 }
 
+variable "instance_type_jenkins_slave" {
+  description = "The type of server instance "
+  type        = string
+  default     = "t2.micro"
+}
 
 #################
-#Server         #
+#Jenkins master #
 #################
 
 variable "web_page_port" {
@@ -175,19 +195,19 @@ variable "web_page_port" {
   default     = 8080
 }
 
-variable "web_server_ssh_port" {
+variable "jenkins_ssh_port" {
   description = "Web page port"
   type        = number
   default     = 22
 }
 
-variable "server_private_ip" {
+variable "jenkins_master_private_ip" {
   description = "server_private_ip"
   type        = string
   default     = "10.0.1.200"
 }
 
-variable "instance_type_server" {
+variable "instance_type_jenkins" {
   description = "The type of server instance "
   type        = string
   default     = "t2.micro"
