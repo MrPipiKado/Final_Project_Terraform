@@ -17,3 +17,8 @@ output "db_endpoint" {
     description = "Connect to Jenkins on this IP"
     value       = aws_db_instance.db[0].endpoint
 }
+
+output "elb_dns" {
+    description = "Connect to application"
+    value       = aws_lb.final_lb.dns_name
+}

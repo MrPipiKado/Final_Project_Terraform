@@ -26,6 +26,12 @@ variable "create_db" {
   default     = true
 }
 
+variable "deployment_port" {
+  description = "Kubernetes node port"
+  type        = number
+  default     = 32392
+}
+
 #################
 #VPC            #
 #################
@@ -103,7 +109,7 @@ variable "private_subnet_cidrs" {
 variable "azs" {
   description = "Availability Zone A name"
   type        = list(string)
-  default     = ["us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"]
+  default     = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d"]
 }
 
 variable "map_public_ip_on_launch" {
@@ -136,13 +142,13 @@ variable "internet_cidr_block" {
 variable "ami_ubuntu" {
   description = "Ubuntu server 20.04"
   type        = string
-  default     = "ami-06e54d05255faf8f6"
+  default     = "ami-0dba2cb6798deb6d8"
 }
 
 variable "instance_type_k8s_master" {
   description = "The type of jenkins instance "
   type        = string
-  default     = "t2.micro"
+  default     = "t2.medium"
 }
 
 variable "key_name" {
@@ -182,7 +188,7 @@ variable "jenkins_console_port" {
 variable "instance_type_jenkins_slave" {
   description = "The type of server instance "
   type        = string
-  default     = "t2.micro"
+  default     = "t2.medium"
 }
 
 #################
@@ -210,7 +216,7 @@ variable "jenkins_master_private_ip" {
 variable "instance_type_jenkins" {
   description = "The type of server instance "
   type        = string
-  default     = "t2.micro"
+  default     = "t2.medium"
 }
 #################
 #RDS DB         #

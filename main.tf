@@ -154,10 +154,8 @@ resource "aws_instance" "k8s_master" {
   vpc_security_group_ids = [aws_security_group.k8s_master.id]
   private_ip             = var.k8s_master_private_ip
 
-  ebs_block_device {
-    device_name  = "/dev/sda1" 
-    volume_size  = 8
-    volume_type  = "gp2"
+  root_block_device {
+    delete_on_termination = false
   }
 
   depends_on = [
@@ -170,7 +168,6 @@ resource "aws_instance" "k8s_master" {
     Name = "k8s_master_bastion"
   }
 }
-
 
 #################
 #Jenkins master #
@@ -195,6 +192,22 @@ resource "aws_security_group" "jenkins_master" {
     to_port     = var.jenkins_ssh_port
     protocol    = "tcp"
     security_groups = [aws_security_group.k8s_master.id]
+  }
+
+  ingress {
+    description = "Jenkins ssh from anywhere"
+    from_port   = 10250
+    to_port     = 10250
+    protocol    = "tcp"
+    security_groups = [aws_security_group.k8s_master.id]
+  }
+
+  ingress {
+    description = "Jenkins ssh from anywhere"
+    from_port   = var.deployment_port
+    to_port     = var.deployment_port
+    protocol    = "tcp"
+    cidr_blocks = [var.internet_cidr_block]
   }
 
   egress {
@@ -222,15 +235,13 @@ resource "aws_instance" "jenkins_master" {
   instance_type          = var.instance_type_jenkins
   subnet_id              = aws_subnet.public[0].id
   key_name               = var.key_name
-  vpc_security_group_ids = [aws_security_group.jenkins_master.id]
+  vpc_security_group_ids = [aws_security_group.jenkins_master.id, aws_security_group.elb_in.id]
   private_ip             = var.jenkins_master_private_ip
 
-  ebs_block_device {
-    device_name  = "/dev/sda1" 
-    volume_size  = 8
-    volume_type  = "gp2"
+  root_block_device {
+    delete_on_termination = false
   }
-
+  
   depends_on = [
     aws_vpc.this,
     aws_route_table.public_route,
@@ -275,6 +286,22 @@ resource "aws_security_group" "jenkins_slave" {
     security_groups = [aws_security_group.k8s_master.id]
   }
 
+  ingress {
+    description = "Jenkins ssh from anywhere"
+    from_port   = 10250
+    to_port     = 10250
+    protocol    = "tcp"
+    security_groups = [aws_security_group.k8s_master.id]
+  }
+
+  ingress {
+    description = "Jenkins ssh from anywhere"
+    from_port   = var.deployment_port
+    to_port     = var.deployment_port
+    protocol    = "tcp"
+    cidr_blocks = [var.internet_cidr_block]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -300,13 +327,11 @@ resource "aws_instance" "jenkins_slave" {
   instance_type               = var.instance_type_jenkins_slave
   subnet_id                   = aws_subnet.public[0].id
   key_name                    = var.key_name
-  vpc_security_group_ids      = [aws_security_group.jenkins_slave.id]
+  vpc_security_group_ids      = [aws_security_group.jenkins_slave.id, aws_security_group.elb_in.id]
   private_ip                  = var.jenkins_slave_private_ip
 
-  ebs_block_device {
-    device_name  = "/dev/sda1" 
-    volume_size  = 8
-    volume_type  = "gp2"
+  root_block_device {
+    delete_on_termination = false
   }
 
   depends_on = [
@@ -402,4 +427,139 @@ resource "aws_db_instance" "db" {
     Name = "FinalProjectDB"
   }
 
+}
+
+#################
+#Load balancer  #
+#################
+
+resource "aws_security_group" "elb" {
+  name        = "elb"
+  description = "Allow access to alb from internet"
+  vpc_id      = aws_vpc.this[0].id
+
+  ingress {
+    description = "DB from production instances"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.internet_cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.internet_cidr_block]
+  }
+
+  tags = {
+    Name = "ALB_SG"
+  }
+
+  depends_on = [
+    aws_vpc.this[0],
+    aws_subnet.public[0],
+    aws_route_table.public_route,
+  ]
+}
+
+resource "aws_security_group" "elb_in" {
+  name        = "elb_in"
+  description = "Allow access to instance from elb"
+  vpc_id      = aws_vpc.this[0].id
+
+  ingress {
+    description = "DB from production instances"
+    from_port   = var.deployment_port
+    to_port     = var.deployment_port
+    protocol    = "tcp"
+    security_groups = [aws_security_group.elb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.internet_cidr_block]
+  }
+
+  tags = {
+    Name = "ALB_IN_SG"
+  }
+
+  depends_on = [
+    aws_vpc.this[0],
+    aws_subnet.public[0],
+    aws_route_table.public_route,
+  ]
+}
+
+resource "aws_lb_target_group" "final_lb" {
+  name     = "final-lb"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.this[0].id
+}
+
+resource "aws_lb_target_group_attachment" "jenkins_master" {
+  target_group_arn = aws_lb_target_group.final_lb.arn
+  target_id        = aws_instance.jenkins_master[0].id
+  port             = var.deployment_port
+  depends_on = [
+    aws_lb_target_group.final_lb,
+  ]
+}
+
+resource "aws_lb_target_group_attachment" "jenkins_slave" {
+  target_group_arn = aws_lb_target_group.final_lb.arn
+  target_id        = aws_instance.jenkins_slave[0].id
+  port             = var.deployment_port
+}
+
+resource "aws_lb_listener" "http"{
+  load_balancer_arn = aws_lb.final_lb.arn
+  port = 80
+  protocol = "HTTP"
+
+  default_action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "404: page not found"
+      status_code = 404
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "listener"{
+  listener_arn = aws_lb_listener.http.arn
+  priority = 100
+
+  condition {
+    path_pattern {
+      values = ["/"]
+    }
+  }
+
+  action {
+    type = "forward"
+    target_group_arn = aws_lb_target_group.final_lb.arn
+  }
+
+}
+
+resource "aws_lb" "final_lb" {
+  name               = "final-elb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.elb.id]
+  subnets            = [aws_subnet.public[0].id, aws_subnet.public[1].id]
+  enable_http2       = true
+  enable_deletion_protection = false
+
+  tags = {
+    Name = "final-lb"
+  }
 }
