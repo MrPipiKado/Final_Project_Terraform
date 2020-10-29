@@ -146,7 +146,7 @@ variable "ami_ubuntu" {
 }
 
 variable "instance_type_k8s_master" {
-  description = "The type of jenkins instance "
+  description = "The type of k8s master instance "
   type        = string
   default     = "t2.medium"
 }
@@ -186,7 +186,7 @@ variable "jenkins_console_port" {
 }
 
 variable "instance_type_jenkins_slave" {
-  description = "The type of server instance "
+  description = "The type of jenkins slave instance "
   type        = string
   default     = "t2.medium"
 }
@@ -202,7 +202,7 @@ variable "web_page_port" {
 }
 
 variable "jenkins_ssh_port" {
-  description = "Web page port"
+  description = "jenkins_ssh_port"
   type        = number
   default     = 22
 }
@@ -214,7 +214,7 @@ variable "jenkins_master_private_ip" {
 }
 
 variable "instance_type_jenkins" {
-  description = "The type of server instance "
+  description = "The type of jenkins instance "
   type        = string
   default     = "t2.medium"
 }

@@ -119,7 +119,7 @@ resource "aws_security_group" "k8s_master" {
   }
 
   ingress {
-    description = "Bastion ssh from anywhere"
+    description = "cluster external port from anywhere"
     from_port   = var.cluster_port
     to_port     = var.cluster_port
     protocol    = "tcp"
@@ -195,7 +195,7 @@ resource "aws_security_group" "jenkins_master" {
   }
 
   ingress {
-    description = "Jenkins ssh from anywhere"
+    description = "Port to exec into pods from k8s_master"
     from_port   = 10250
     to_port     = 10250
     protocol    = "tcp"
@@ -203,7 +203,7 @@ resource "aws_security_group" "jenkins_master" {
   }
 
   ingress {
-    description = "Jenkins ssh from anywhere"
+    description = "nodeexternal service port from anywhere"
     from_port   = var.deployment_port
     to_port     = var.deployment_port
     protocol    = "tcp"
@@ -287,7 +287,7 @@ resource "aws_security_group" "jenkins_slave" {
   }
 
   ingress {
-    description = "Jenkins ssh from anywhere"
+    description = "exec into pods from k8s_master"
     from_port   = 10250
     to_port     = 10250
     protocol    = "tcp"
@@ -295,7 +295,7 @@ resource "aws_security_group" "jenkins_slave" {
   }
 
   ingress {
-    description = "Jenkins ssh from anywhere"
+    description = "Deployment from anywhere"
     from_port   = var.deployment_port
     to_port     = var.deployment_port
     protocol    = "tcp"
@@ -470,7 +470,7 @@ resource "aws_security_group" "elb_in" {
   vpc_id      = aws_vpc.this[0].id
 
   ingress {
-    description = "DB from production instances"
+    description = "alb to instances"
     from_port   = var.deployment_port
     to_port     = var.deployment_port
     protocol    = "tcp"
